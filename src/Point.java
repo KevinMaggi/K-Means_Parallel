@@ -88,7 +88,8 @@ public class Point {
 
         float squareSum = 0;
         for (int i = 0; i < p1.getDimension(); i++) {
-            squareSum += pow(p1.getCoordinate(i+1) - p2.getCoordinate(i+1), 2);
+            float difference = p1.getCoordinate(i+1) - p2.getCoordinate(i+1);
+            squareSum += difference*difference;
         }
         return (float) sqrt(squareSum);
     }

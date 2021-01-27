@@ -13,7 +13,7 @@ public final class KMeans<T extends Point> {
      */
     public static final float tolerance = 0.005F;
 
-    private final int NUMBER_OF_THREADS = Runtime.getRuntime().availableProcessors() + 1;
+    public static final int NUMBER_OF_THREADS = Runtime.getRuntime().availableProcessors() + 1;
 
     /**
      * Performs the k-means clusterization
@@ -40,25 +40,16 @@ public final class KMeans<T extends Point> {
         ExecutorService ex = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
         T[] points = data.toArray();
-        int blockDim = numPoints/NUMBER_OF_THREADS + ((numPoints % NUMBER_OF_THREADS == 0) ? 0 : 1); // ceil
 
         Point[] centroids = initialCentroids(k, data.getPoints());
         Integer[] clusterization = new Integer[numPoints];
         boolean stop = false;
 
+        Future<?>[] tasks = new Future[NUMBER_OF_THREADS];
+
         while (!stop) {
-            Future<?>[] tasks = new Future[NUMBER_OF_THREADS];
-
             for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                int from = blockDim*i;
-                int to;
-                if (i != NUMBER_OF_THREADS - 1) {
-                    to = blockDim*(i+1) - 1;
-                } else {
-                    to = numPoints - 1;
-                }
-
-                tasks[i] = ex.submit(new KMeansIterationBlock(centroids, points, clusterization, from, to));
+                tasks[i] = ex.submit(new KMeansIterationBlock(centroids, points, clusterization, i));
             }
             for (int i = 0; i < NUMBER_OF_THREADS; i++) {
                 try {
@@ -179,22 +170,21 @@ public final class KMeans<T extends Point> {
         }
 
         Point[] centroids = new Point[k];
-        int[] pointIndexes = new int[k];
         // Random r = new Random();
-        // int firstIndex = r.nextInt(numPoints);
-        int firstIndex = 0;
-        centroids[0] = points.get(firstIndex);
-        pointIndexes[0] = firstIndex;
+        // int firstCentroidIndex = r.nextInt(numPoints);
+        int firstCentroidIndex = 0;
+        centroids[0] = new Point(points.get(firstCentroidIndex));
 
         for (int i = 1; i < k; i++) {
+
             float maxMinDistance = 0;
             int newCentroidIndex = 0;
 
             for (int p = 0; p < numPoints; p++) {
                 float minDistance = Float.POSITIVE_INFINITY;
-                for (int indexCentroid : pointIndexes) {
-                    float distance = Point.getEuclideanDistance(points.get(p), points.get(indexCentroid));
-                        // cannot throws exception because SetOfPoint ensure that all the points are not null and of the same dimension
+                for (int c = 0; c < i; c++) {
+                    float distance = Point.getEuclideanDistance(points.get(p), centroids[c]);
+                    // cannot throws exception because SetOfPoint ensure that all the points are not null and of the same dimension
                     if (distance < minDistance) {
                         minDistance = distance;
                     }
@@ -205,7 +195,6 @@ public final class KMeans<T extends Point> {
                 }
             }
             centroids[i] = new Point(points.get(newCentroidIndex));
-            pointIndexes[i] = newCentroidIndex;
         }
 
         return centroids;

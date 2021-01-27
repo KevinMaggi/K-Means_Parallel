@@ -40,12 +40,11 @@ public class Cluster<T extends Point> extends SetOfPoints<T> {
         int dimension = getDomain().getDimension();
         float[] coordinates = new float[dimension];
 
-        for (int i = 0; i < dimension; i++) {
-            for (T p : this.points) {
-                coordinates[i] += p.getCoordinate(i + 1);
-                    // cannot throws exception because we know the dimension and we respect it
+        for (T p : this.points) {
+            for (int i = 0; i < dimension; i++) {
+                coordinates[i] += p.getCoordinate(i + 1)/this.points.size();
+                // cannot throws exception because we know the dimension and we respect it
             }
-            coordinates[i] /= this.points.size();
         }
 
         return new Point(coordinates);

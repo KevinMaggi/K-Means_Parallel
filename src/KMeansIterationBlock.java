@@ -28,7 +28,7 @@ public class KMeansIterationBlock implements Runnable {
             Integer nearestCentroid = null;
 
             for (int c = 0; c < centroids.length; c++) {
-                float distance = Point.getEuclideanDistance(centroids[c], points[p]);
+                float distance = Point.getSquaredEuclideanDistance(centroids[c], points[p]);
                     // cannot throws exception because we ensure that centroids and points wer all not null and of the same dimension
                 if (distance < minDistance) {
                     minDistance = distance;

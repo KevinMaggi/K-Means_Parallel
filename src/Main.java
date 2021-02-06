@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class Main {
-    private static final int K_MIN = 1;
-    private static final int K_MAX = 3;
+    private static final int K_MIN = 10;
+    private static final int K_MAX = 10;
 
     public static void main(String[] args) {
         try {
@@ -19,6 +19,7 @@ public class Main {
             SetOfPoints<RGBPixel> data = Image.pixelize(img);
 
             KMeans<RGBPixel> kmeans = new KMeans<>();
+            //KMeansImplicit<RGBPixel> kmeans = new KMeansImplicit<>();
 
             for (int k = K_MIN; k <= K_MAX; k++) {
                 long startTimeMillis = System.currentTimeMillis();

@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 
 /**
@@ -30,7 +31,7 @@ public class Image {
             throw new NullPointerException("Image can't be null");
         }
 
-        SetOfPoints<RGBPixel> data = new SetOfPoints<>(Domain.RGB());
+        ArrayList<RGBPixel> data = new ArrayList<>();
         for (int x = 0; x < img.getWidth(); x++) {
             for (int y = 0; y < img.getHeight(); y++) {
                 Color color = new Color(img.getRGB(x, y));
@@ -39,7 +40,7 @@ public class Image {
             }
         }
 
-        return data;
+        return new SetOfPoints<>(Domain.RGB(), data);
     }
 
     /**

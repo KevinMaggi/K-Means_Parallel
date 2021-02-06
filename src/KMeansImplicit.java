@@ -1,5 +1,8 @@
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.abs;
@@ -8,7 +11,7 @@ import static java.lang.Math.abs;
  * For k-Means clusterization
  * @param <T> subclass of Point
  */
-public final class KMeans<T extends Point> {
+public final class KMeansImplicit<T extends Point> {
     /**
      * Maximum change of a centroid (in every direction) to be considered unchanged
      */
@@ -49,33 +52,28 @@ public final class KMeans<T extends Point> {
         Integer[] clusterization = new Integer[numPoints];
         boolean stop = false;
 
-        Future<?>[] threads = new Future[NUMBER_OF_THREADS];
-        UpdateClustersTask[] tasks = new UpdateClustersTask[NUMBER_OF_THREADS];
-        for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-            tasks[i] = new UpdateClustersTask(/*Arrays.copyOf(centroids, k)*/ centroids, points, clusterization, i);
-        }
-
         while (!stop) {
-            for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                threads[i] = ex.submit(tasks[i]);
-            }
-            for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                try {
-                    threads[i].get();
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
-            }
+            Point[] actualCentroids = centroids;
+            Arrays.parallelSetAll(clusterization, index -> {
+                float minDistance = Float.POSITIVE_INFINITY;
+                Integer nearestCentroid = null;
 
+                for (int c = 0; c < actualCentroids.length; c++) {
+                    float distance = Point.getSquaredEuclideanDistance(actualCentroids[c], points[index]);
+                    // cannot throws exception because we ensure that centroids and points wer all not null and of the same dimension
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestCentroid = c;
+                    }
+                }
+                return nearestCentroid;
+            });
             Point[] newCentroids = newCentroids(points, clusterization, k);
 
             if(checkStop(centroids, newCentroids)) {
                 stop = true;
             } else {
                 centroids = newCentroids;
-                for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                    tasks[i].updateCentroids(/*Arrays.copyOf(newCentroids, k)*/ newCentroids);
-                }
             }
         }
 
@@ -87,7 +85,7 @@ public final class KMeans<T extends Point> {
         }
         for (int i = 0; i < points.length; i++) {
             clusters.get(clusterization[i]).add(points[i]);
-                // cannot throws exception because the domain of all clusters is the same from which the data belongs to
+            // cannot throws exception because the domain of all clusters is the same from which the data belongs to
         }
 
         return clusters;
@@ -104,7 +102,7 @@ public final class KMeans<T extends Point> {
             float[] oldCentroid = oldCentroids[k].getCoordinates();
             float[] newCentroid = newCentroids[k].getCoordinates();
             for (int i = 0; i < oldCentroid.length; i++) {
-                if (abs(oldCentroid[i] - newCentroid[i]) > KMeans.TOLERANCE) {
+                if (abs(oldCentroid[i] - newCentroid[i]) > KMeansImplicit.TOLERANCE) {
                     return false;
                 }
             }
@@ -128,7 +126,7 @@ public final class KMeans<T extends Point> {
         for (int i = 0; i < points.length; i++) {
             for (int j = 0; j < dimension; j++) {
                 sum[clusterization[i]][j] += points[i].getCoordinate(j+1);
-                    // cannot throws exception because all points have the same dimension and we respect it
+                // cannot throws exception because all points have the same dimension and we respect it
             }
             clustersSize[clusterization[i]]++;
         }

@@ -49,32 +49,64 @@ public final class KMeans<T extends Point> {
         Integer[] clusterization = new Integer[numPoints];
         boolean stop = false;
 
-        Future<?>[] threads = new Future[NUMBER_OF_THREADS];
-        UpdateClustersTask[] tasks = new UpdateClustersTask[NUMBER_OF_THREADS];
+        // UpdateClusters initialization
+        Future<?>[] updateClustersThreads = new Future[NUMBER_OF_THREADS];
+        UpdateClustersTask[] updateClustersTasks = new UpdateClustersTask[NUMBER_OF_THREADS];
         for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-            tasks[i] = new UpdateClustersTask(/*Arrays.copyOf(centroids, k)*/ centroids, points, clusterization, i);
+            updateClustersTasks[i] = new UpdateClustersTask(/*Arrays.copyOf(centroids, k)*/ centroids, points, clusterization, i);
         }
 
+        // NewCentroids initialization
+        Future<?>[] newCentroidsThreads = new Future[NUMBER_OF_THREADS];
+        NewCentroidsTask[] newCentroidsTasks = new NewCentroidsTask[NUMBER_OF_THREADS];
+        for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+            newCentroidsTasks[i] = new NewCentroidsTask(points, clusterization, k, i);
+        }
+        int dimension = points[0].getDimension();
+
         while (!stop) {
+            // UpdateClusters
             for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                threads[i] = ex.submit(tasks[i]);
+                updateClustersThreads[i] = ex.submit(updateClustersTasks[i]);
             }
             for (int i = 0; i < NUMBER_OF_THREADS; i++) {
                 try {
-                    threads[i].get();
+                    updateClustersThreads[i].get();
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
             }
 
-            Point[] newCentroids = newCentroids(points, clusterization, k);
+            // NewCentroids
+            float[][] sum = new float[k][dimension];
+            int[] clustersSize = new int[k];
+            for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+                newCentroidsTasks[i].reset(clustersSize, sum);
+                newCentroidsThreads[i] = ex.submit(newCentroidsTasks[i]);
+            }
+            for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+                try {
+                    newCentroidsThreads[i].get();
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+            Point[] newCentroids = new Point[k];
+            for (int w = 0; w < k; w++) {
+                float[] coordinate = new float[dimension];
+                for (int j = 0; j < dimension; j++) {
+                    coordinate[j] = sum[w][j]/ ((float) clustersSize[w]);
+                }
+                newCentroids[w] = new Point(coordinate);
+            }
 
+            // CheckStop
             if(checkStop(centroids, newCentroids)) {
                 stop = true;
             } else {
                 centroids = newCentroids;
                 for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                    tasks[i].updateCentroids(/*Arrays.copyOf(newCentroids, k)*/ newCentroids);
+                    updateClustersTasks[i].updateCentroids(/*Arrays.copyOf(newCentroids, k)*/ newCentroids);
                 }
             }
         }
@@ -110,39 +142,6 @@ public final class KMeans<T extends Point> {
             }
         }
         return true;
-    }
-
-
-
-    /**
-     * Calculates the new centroids based on the updated clusterization
-     * @param points points
-     * @param clusterization clusterization
-     * @param k number of clusters
-     * @return new centroids
-     */
-    private Point[] newCentroids(final Point[] points, final Integer[] clusterization, int k) {
-        int dimension = points[0].getDimension();
-        float[][] sum = new float[k][dimension];
-        int[] clustersSize = new int[k];
-        for (int i = 0; i < points.length; i++) {
-            for (int j = 0; j < dimension; j++) {
-                sum[clusterization[i]][j] += points[i].getCoordinate(j+1);
-                    // cannot throws exception because all points have the same dimension and we respect it
-            }
-            clustersSize[clusterization[i]]++;
-        }
-
-        Point[] centroids = new Point[k];
-        for (int w = 0; w < k; w++) {
-            float[] coordinate = new float[dimension];
-            for (int j = 0; j < dimension; j++) {
-                coordinate[j] = sum[w][j]/clustersSize[w];
-            }
-            centroids[w] = new Point(coordinate);
-        }
-
-        return centroids;
     }
 
     /**

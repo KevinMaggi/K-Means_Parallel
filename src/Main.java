@@ -6,14 +6,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class Main {
-    private static final int K_MIN = 10;
-    private static final int K_MAX = 10;
+    private static final int K_MIN = 25;
+    private static final int K_MAX = 25;
+    private static final int K_STEP = 2;
+    private static final int REPETITIONS = 2;
 
     public static void main(String[] args) {
         try {
             int[] keys = new int[K_MAX - K_MIN + 1];
             double[] times = new double[K_MAX - K_MIN + 1];
-            String filename = "6K";
+            String filename = "3K";
 
             BufferedImage img = Image.load("src/image/" + filename + ".jpg");
             SetOfPoints<RGBPixel> data = Image.pixelize(img);
@@ -21,17 +23,26 @@ public class Main {
             KMeans<RGBPixel> kmeans = new KMeans<>();
             //KMeansImplicit<RGBPixel> kmeans = new KMeansImplicit<>();
 
-            for (int k = K_MIN; k <= K_MAX; k++) {
-                long startTimeMillis = System.currentTimeMillis();
-                ArrayList<Cluster<RGBPixel>> clusters = kmeans.clusterize(k, data);
-                long endTimeMillis = System.currentTimeMillis();
+            for (int k = K_MIN; k <= K_MAX; k += K_STEP) {
+                ArrayList<Cluster<RGBPixel>> clusters = null;
+                double diffTimeMillis = 0;
+                for (int i = 0; i < REPETITIONS; i++) {
+                    clusters = null;        // to garbage collect previous result and avoid Heap Space Error
+
+                    long startTimeMillis = System.currentTimeMillis();
+                    clusters = kmeans.clusterize(k, data);
+                    long endTimeMillis = System.currentTimeMillis();
+
+                    diffTimeMillis += endTimeMillis - startTimeMillis;
+                    System.out.println("For k = " + Integer.toString(k) + ", computation time is " + Double.toString((endTimeMillis-startTimeMillis)/1000d) + " seconds");
+                }
 
                 Image.export(clusters, "src/image/" + filename + "-reduced" + k + ".png", img.getWidth(), img.getHeight());
 
-                double diffTimeSeconds = (double) (endTimeMillis - startTimeMillis) / 1000;
+                double meanTimeSeconds = diffTimeMillis / (1000d * REPETITIONS);
                 keys[k - K_MIN] = k;
-                times[k - K_MIN] = diffTimeSeconds;
-                System.out.println("For k = " + Integer.toString(k) + ", computation time is " + Double.toString(diffTimeSeconds) + " seconds");
+                times[k - K_MIN] = meanTimeSeconds;
+                System.out.println("For k = " + Integer.toString(k) + ", MEAN computation time is " + Double.toString(meanTimeSeconds) + " seconds");
             }
 
             saveTextFile(keys, times, "timesOf" + filename);
@@ -46,7 +57,7 @@ public class Main {
         try {
             File file = new File(path);
             BufferedWriter output = new BufferedWriter(new FileWriter(file));
-            for (int k = 0; k < kList.length; k++) {
+            for (int k = 0; k < kList.length; k += K_STEP) {
                 output.write(Integer.toString(kList[k]));
                 output.write(" ");
                 output.write(Double.toString(timeList[k]));

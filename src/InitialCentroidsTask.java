@@ -20,12 +20,14 @@ public class InitialCentroidsTask implements Runnable {
     private int iteration = 0;
 
     /**
-     * Index of the new centroid
+     * Index of the new centroid.
+     * SHARED, but accessed in critical section
      */
     private AtomicInteger newCentroidIndex = null;
 
     /**
-     * Maximum minimum distance
+     * Maximum minimum distance.
+     * SHARED, but accessed in critical section
      */
     private AtomicInteger maxMinDistance = null;
 
@@ -62,7 +64,7 @@ public class InitialCentroidsTask implements Runnable {
      * @param maxMinDistance maximum minimum distance
      * @param newCentroidIndex index of the new centroid
      */
-    public void nextIteration(AtomicInteger maxMinDistance, AtomicInteger newCentroidIndex) {
+    public void nextIteration(final AtomicInteger maxMinDistance, final AtomicInteger newCentroidIndex) {
         this.iteration++;
         this.maxMinDistance = maxMinDistance;
         this.newCentroidIndex = newCentroidIndex;
@@ -89,10 +91,10 @@ public class InitialCentroidsTask implements Runnable {
 
         // Compare with other candidates
         lock.lock();
-            if (candidateMaxMinDistance > Float.intBitsToFloat(maxMinDistance.get())) {
-                maxMinDistance.set(Float.floatToIntBits(candidateMaxMinDistance));
-                newCentroidIndex.set(candidateCentroid);
-            }
+        if (candidateMaxMinDistance > Float.intBitsToFloat(maxMinDistance.get())) {
+            maxMinDistance.set(Float.floatToIntBits(candidateMaxMinDistance));
+            newCentroidIndex.set(candidateCentroid);
+        }
         lock.unlock();
     }
 }

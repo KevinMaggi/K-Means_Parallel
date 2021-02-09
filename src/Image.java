@@ -60,8 +60,11 @@ public class Image {
         BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
         for (Cluster<RGBPixel> c : clusters) {
             Point center = c.getCenter();
-            Color color = new Color(center.getCoordinate(1)/255, center.getCoordinate(2)/255, center.getCoordinate(3)/255);
-                // cannot throw exception because a center of a cluster of RGBPixel has certainly 3 dimensions
+            float r = (float)((int) center.getCoordinate(1))/255;
+            float g = (float)((int) center.getCoordinate(2))/255;
+            float b = (float)((int) center.getCoordinate(3))/255;
+            Color color = new Color((r > 1 ? 1 : r), (g > 1 ? 1 : g), (b > 1 ? 1 : b));     // due floating-point arithmetic sometimes can be > 1
+            // cannot throw exception because a center of a cluster of RGBPixel has certainly 3 dimensions
             for (RGBPixel p : c.getPoints()) {
                 img.setRGB(p.getX(), p.getY(), color.getRGB());
             }

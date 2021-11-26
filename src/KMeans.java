@@ -53,7 +53,7 @@ public final class KMeans<T extends Point> {
         Future<?>[] updateClustersThreads = new Future[NUMBER_OF_THREADS];
         UpdateClustersTask[] updateClustersTasks = new UpdateClustersTask[NUMBER_OF_THREADS];
         for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-            updateClustersTasks[i] = new UpdateClustersTask(/*Arrays.copyOf(centroids, k)*/ centroids, points, clusterization, i);
+            updateClustersTasks[i] = new UpdateClustersTask(centroids, points, clusterization, i);
         }
 
         // NewCentroids initialization
@@ -106,7 +106,7 @@ public final class KMeans<T extends Point> {
             } else {
                 centroids = newCentroids;
                 for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-                    updateClustersTasks[i].updateCentroids(/*Arrays.copyOf(newCentroids, k)*/ newCentroids);
+                    updateClustersTasks[i].updateCentroids(newCentroids);
                 }
             }
         }
